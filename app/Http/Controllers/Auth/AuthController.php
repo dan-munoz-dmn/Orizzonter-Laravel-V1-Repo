@@ -3,66 +3,83 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Maneja la solicitud de inicio de sesión y genera un token.
+     * Create a new AuthController instance.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return void
      */
-    public function login(Request $request)
+    public function __construct()
     {
-        // 1. Validar las credenciales
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        // 2. Intentar autenticar al usuario
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['Las credenciales proporcionadas son incorrectas.'],
-            ]);
-        }
-
-        // 3. Obtener el usuario autenticado
-        $user = $request->user();
-
-        // 4. Generar el token de acceso
-        // El nombre del token ('auth-token') es solo para identificación.
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        // 5. Devolver el token en la respuesta
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login exitoso',
-            'data' => [
-                'token' => $token,
-            ]
-        ], 200);
+        $this->middleware('auth:api', ['except' => ['login']]);
     }
 
     /**
-     * Maneja la solicitud de cierre de sesión y revoca el token actual.
+     * Get a JWT via given credentials.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function logout(Request $request)
+    public function login(): JsonResponse
     {
-        // 1. Revocar el token actual del usuario
-        $request->user()->currentAccessToken()->delete();
+        $credentials = request(['email', 'password']);
 
-        // 2. Devolver una respuesta exitosa
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return $this->respondWithToken($token);
+    }
+
+    /**
+     * Log the user out (Invalidate the token).
+     *
+     * @return JsonResponse
+     */
+    public function logout(): JsonResponse
+    {
+        Auth::guard('api')->logout();
+
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    /**
+     * Refresh a token.
+     *
+     * @return JsonResponse
+     */
+    public function refresh(): JsonResponse
+    {
+        return $this->respondWithToken(Auth::guard('api')->refresh());
+    }
+
+    /**
+     * Get the authenticated User.
+     *
+     * @return JsonResponse
+     */
+    public function me(): JsonResponse
+    {
+        return response()->json(Auth::guard('api')->user());
+    }
+
+    /**
+     * Get the token array structure.
+     *
+     * @param  string $token
+     *
+     * @return JsonResponse
+     */
+    protected function respondWithToken(string $token): JsonResponse
+    {
         return response()->json([
-            'status' => 'success',
-            'message' => 'Logout exitoso',
-            'data' => null
-        ], 200);
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
+            'user' => Auth::guard('api')->user()
+        ]);
     }
 }

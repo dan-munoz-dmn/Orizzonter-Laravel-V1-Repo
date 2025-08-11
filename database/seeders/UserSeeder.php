@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             'name' => 'Dan',
             'email' => 'dan@gmail.com',
             // Usamos Hash::make() para asegurarnos de que la contraseña esté encriptada
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('password'),
             'role_id' => 1, // Asegúrate de que el role_id exista
         ]);
 
