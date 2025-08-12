@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatParticipantController;
 use App\Http\Controllers\ChallengeController;
@@ -27,7 +28,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/register', [RegisterController::class, 'register']);
 
 // Protected routes with JWT
 Route::middleware('auth:api')->group(function () {
