@@ -2,127 +2,115 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-
-use App\Traits\Queryable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
-class User extends Authenticatable implements JWTSubject
+class User extends Model
 {
-    use HasFactory, Notifiable, Queryable;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
+        'last_name',
         'email',
         'password',
-        'role_id'
+        'role_id',
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
-
-    public function getJWTIdentifier()
-    {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
+    /**
+     * Listas blancas
+     */
+    protected array $allowIncluded = ['roles', 'profile', 'profile.personalization'];
 
 
-    // Listas blancas para el trait Queryable
-    protected array $allowIncluded = [
-        'role', 'profile', 'statistic', 'challenges', 'travelRoutes', 'savedTravelRoutes',
-        'routeRatings', 'routeComments', 'customPlaces', 'chats', 'messages', 'following', 'followers',
-
-        'profile.personalization'
-    ];
     protected array $allowFilter = ['id', 'name', 'email', 'role_id'];
     protected array $allowSort = ['id', 'name', 'last_name', 'email', 'created_at'];
 
-    public function role()
+    /**
+     * Relaciones
+     */
+    public function roles()
     {
         return $this->belongsTo(Role::class);
     }
+
 
     public function profile()
     {
         return $this->hasOne(Profile::class);
     }
 
-    public function statistic()
+    /**
+     * Scopes reutilizables
+     */
+
+    // Scope para incluir relaciones (eager loading)
+    public function scopeIncluded(Builder $query)
     {
-        return $this->hasOne(Statistic::class);
+        if (empty($this->allowIncluded) || empty(request('included'))) {
+            return;
+        }
+
+        $relations = explode(',', request('included'));
+        $allowIncluded = collect($this->allowIncluded);
+
+        $filtered = array_filter($relations, fn($rel) => $allowIncluded->contains($rel));
+
+        if (!empty($filtered)) {
+            $query->with($filtered);
+        }
     }
 
-    public function challenges()
+    // Scope para filtrar
+    public function scopeFilter(Builder $query)
     {
-        return $this->belongsToMany(Challenge::class, 'user_challenges')
-            ->withPivot('status', 'progress', 'completed_at')
-            ->withTimestamps();
+        if (empty($this->allowFilter) || empty(request('filter'))) {
+            return;
+        }
+
+        $filters = request('filter');
+        $allowFilter = collect($this->allowFilter);
+
+        foreach ($filters as $field => $value) {
+            if ($allowFilter->contains($field)) {
+                $query->where($field, 'LIKE', '%' . $value . '%');
+            }
+        }
     }
 
-    public function travelRoutes()
+    // Scope para ordenar
+    public function scopeSort(Builder $query)
     {
-        return $this->hasMany(TravelRoute::class);
+        if (empty($this->allowSort) || empty(request('sort'))) {
+            return;
+        }
+
+        $sortFields = explode(',', request('sort'));
+        $allowSort = collect($this->allowSort);
+
+        foreach ($sortFields as $field) {
+            $direction = 'asc';
+
+            if (substr($field, 0, 1) === '-') {
+                $direction = 'desc';
+                $field = substr($field, 1);
+            }
+
+            if ($allowSort->contains($field)) {
+                $query->orderBy($field, $direction);
+            }
+        }
     }
 
-    public function savedTravelRoutes()
+    // Scope para obtener todos o paginar
+    public function scopeGetOrPaginate(Builder $query)
     {
-        return $this->hasMany(SavedTravelRoute::class);
-    }
+        $perPage = intval(request('perPage'));
 
-    public function routeRatings()
-    {
-        return $this->hasMany(RouteRating::class);
-    }
-
-    public function routeComments()
-    {
-        return $this->hasMany(RouteComment::class);
-    }
-
-    public function customPlaces()
-    {
-        return $this->hasMany(UserCustomPlace::class);
-    }
-
-    public function chats()
-    {
-        return $this->belongsToMany(Chat::class, 'chat_participants')
-            ->withPivot('is_admin', 'last_read_message_id')
-            ->withTimestamps();
-    }
-
-    public function messages()
-    {
-        return $this->hasMany(Message::class);
-    }
-
-    public function following()
-    {
-        return $this->belongsToMany(User::class, 'followers', 'follower_id', 'followed_id')
-            ->withTimestamps();
-    }
-
-    public function followers()
-    {
-        return $this->belongsToMany(User::class, 'followers', 'followed_id', 'follower_id')
-            ->withTimestamps();
+        return $perPage > 0
+            ? $query->paginate($perPage)
+            : $query->get();
     }
 }

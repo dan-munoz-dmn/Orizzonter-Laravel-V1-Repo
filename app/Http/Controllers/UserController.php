@@ -7,36 +7,24 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    protected $userService;
+    protected UserService $userService;
 
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
     }
 
-    public function index(): JsonResponse
+    public function index()
     {
         $users = $this->userService->getAll();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $users
-        ]);
     }
 
-    public function store(StoreUserRequest $request): JsonResponse
+    public function store(StoreUserRequest $request)
     {
         $user = $this->userService->store($request->validated());
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Usuario creado correctamente.',
-            'data' => $user,
-        ], 201);
     }
 
     public function show(User $user): JsonResponse

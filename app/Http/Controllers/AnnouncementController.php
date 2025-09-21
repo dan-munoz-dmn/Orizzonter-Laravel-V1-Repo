@@ -10,23 +10,29 @@ use Illuminate\Http\JsonResponse;
 
 class AnnouncementController extends Controller
 {
-    protected $announcementService;
+    protected AnnouncementService $announcementService;
 
     public function __construct(AnnouncementService $announcementService)
     {
         $this->announcementService = $announcementService;
     }
 
+    /**
+     * Listar anuncios
+     */
     public function index(): JsonResponse
     {
         $announcements = $this->announcementService->getAll();
 
         return response()->json([
             'status' => 'success',
-            'data' => $announcements
+            'data' => $announcements,
         ]);
     }
 
+    /**
+     * Crear un nuevo anuncio
+     */
     public function store(StoreAnnouncementRequest $request): JsonResponse
     {
         $announcement = $this->announcementService->store($request->validated());
@@ -38,6 +44,9 @@ class AnnouncementController extends Controller
         ], 201);
     }
 
+    /**
+     * Mostrar un anuncio con relaciones dinámicas
+     */
     public function show(Announcement $announcement): JsonResponse
     {
         $data = $this->announcementService->getByIdWithRelations($announcement);
@@ -48,6 +57,9 @@ class AnnouncementController extends Controller
         ]);
     }
 
+    /**
+     * Actualizar un anuncio
+     */
     public function update(UpdateAnnouncementRequest $request, Announcement $announcement): JsonResponse
     {
         $updated = $this->announcementService->update($announcement, $request->validated());
@@ -59,6 +71,9 @@ class AnnouncementController extends Controller
         ]);
     }
 
+    /**
+     * Eliminar un anuncio
+     */
     public function destroy(Announcement $announcement): JsonResponse
     {
         $this->announcementService->delete($announcement);

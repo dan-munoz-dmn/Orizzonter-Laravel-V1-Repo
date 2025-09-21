@@ -10,24 +10,30 @@ use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
-    protected $roleService;
+    protected RoleService $roleService;
 
     public function __construct(RoleService $roleService)
     {
         $this->roleService = $roleService;
     }
 
-    public function index():JsonResponse
+    /**
+     * Listar roles
+     */
+    public function index(): JsonResponse
     {
         $roles = $this->roleService->getAll();
-            return response()->json([
-                'status' => 'success',
-                'data' => $roles
-            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $roles,
+        ]);
     }
 
-
-    public function store(StoreRoleRequest $request):JsonResponse
+    /**
+     * Crear rol
+     */
+    public function store(StoreRoleRequest $request): JsonResponse
     {
         $role = $this->roleService->store($request->validated());
 
@@ -38,16 +44,23 @@ class RoleController extends Controller
         ], 201);
     }
 
-    public function show(Role $role):JsonResponse
+    /**
+     * Mostrar un rol
+     */
+    public function show(Role $role): JsonResponse
     {
         $data = $this->roleService->getByIdWithRelations($role);
-            return response()->json([
-                'status' => 'success',
-                'data' => $data,
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
         ]);
     }
 
-    public function update(UpdateRoleRequest $request, Role $role):JsonResponse
+    /**
+     * Actualizar rol
+     */
+    public function update(UpdateRoleRequest $request, Role $role): JsonResponse
     {
         $updated = $this->roleService->update($role, $request->validated());
 
@@ -58,7 +71,10 @@ class RoleController extends Controller
         ]);
     }
 
-    public function destroy(Role $role):JsonResponse
+    /**
+     * Eliminar rol
+     */
+    public function destroy(Role $role): JsonResponse
     {
         $this->roleService->delete($role);
 
